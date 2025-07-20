@@ -12,12 +12,55 @@ from typing import Dict
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from scipy import stats
-from smart_search import search_company, get_company_suggestions
-from market_data import get_live_market_data, get_market_movers, get_sector_data, get_sentiment_data
-from advanced_analytics import get_stock_analytics, get_regression_analysis, get_monte_carlo_analysis
-from enhanced_portfolio import create_enhanced_portfolio_interface
-from advanced_portfolio import create_advanced_portfolio_interface
-from advanced_charting import create_advanced_charting_interface
+# Safe imports with error handling
+try:
+    from smart_search import search_company, get_company_suggestions
+except ImportError as e:
+    st.error(f"Smart search module error: {e}")
+    # Provide fallback functions
+    def search_company(query): return {'status': 'error', 'message': 'Search temporarily unavailable'}
+    def get_company_suggestions(): return ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'JPM']
+
+try:
+    from market_data import get_live_market_data, get_market_movers, get_sector_data, get_sentiment_data
+except ImportError as e:
+    st.error(f"Market data module error: {e}")
+    # Provide fallback functions
+    def get_live_market_data(): return {}
+    def get_market_movers(): return {'gainers': [], 'losers': []}
+    def get_sector_data(): return {}
+    def get_sentiment_data(): return {'sentiment': 'Neutral', 'score': 50, 'vix_level': 20.0}
+
+try:
+    from advanced_analytics import get_stock_analytics, get_regression_analysis, get_monte_carlo_analysis
+except ImportError as e:
+    st.error(f"Advanced analytics module error: {e}")
+    # Provide fallback functions
+    def get_stock_analytics(ticker): return None
+    def get_regression_analysis(ticker): return None
+    def get_monte_carlo_analysis(ticker, days=252): return None
+
+try:
+    from enhanced_portfolio import create_enhanced_portfolio_interface
+except ImportError as e:
+    st.warning(f"Enhanced portfolio module error: {e}")
+    def create_enhanced_portfolio_interface(tickers): 
+        st.info("Enhanced portfolio analysis temporarily unavailable")
+
+try:
+    from advanced_portfolio import create_advanced_portfolio_interface
+except ImportError as e:
+    st.warning(f"Advanced portfolio module error: {e}")
+    def create_advanced_portfolio_interface(tickers): 
+        st.info("Advanced portfolio analysis temporarily unavailable")
+
+try:
+    from advanced_charting import create_advanced_charting_interface
+except ImportError as e:
+    st.warning(f"Advanced charting module error: {e}")
+    def create_advanced_charting_interface(ticker): 
+        st.info("Technical analysis temporarily unavailable")
+
 
 
 
