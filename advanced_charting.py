@@ -88,9 +88,7 @@ class TechnicalAnalyzer:
 
         self.indicators['MACD'] = ema_fast - ema_slow
         self.indicators['MACD_Signal'] = self.indicators['MACD'].ewm(span=signal).mean()
-        self.indicators['MACD_Histogram'] = (
-            self.indicators['MACD'] - self.indicators['MACD_Signal']
-        )
+        self.indicators['MACD_Histogram'] = self.indicators['MACD'] - self.indicators['MACD_Signal']
 
     def calculate_volume_indicators(self):
         """Calculate volume-based indicators"""
@@ -107,9 +105,9 @@ class TechnicalAnalyzer:
             if i == 0:
                 obv.append(self.data['Volume'].iloc[i])
             else:
-                if self.data['Close'].iloc[i] > self.data['Close'].iloc[i - 1]:
+                if self.data['Close'].iloc[i] > self.data['Close'].iloc[i-1]:
                     obv_value += self.data['Volume'].iloc[i]
-                elif self.data['Close'].iloc[i] < self.data['Close'].iloc[i - 1]:
+                elif self.data['Close'].iloc[i] < self.data['Close'].iloc[i-1]:
                     obv_value -= self.data['Volume'].iloc[i]
                 obv.append(obv_value)
 
@@ -242,10 +240,7 @@ class TechnicalAnalyzer:
                 col=1,
             )
 
-            colors = [
-                "green" if val >= 0 else "red"
-                for val in self.indicators['MACD_Histogram']
-            ]
+            colors = ["green" if val >= 0 else "red" for val in self.indicators['MACD_Histogram']]
             fig.add_trace(
                 go.Bar(
                     x=self.data.index,
@@ -259,10 +254,7 @@ class TechnicalAnalyzer:
             )
 
         # Volume
-        colors = [
-            "green" if close >= open_ else "red"
-            for close, open_ in zip(self.data['Close'], self.data['Open'])
-        ]
+        colors = ["green" if close >= open_ else "red" for close, open_ in zip(self.data['Close'], self.data['Open'])]
 
         fig.add_trace(
             go.Bar(
@@ -384,31 +376,15 @@ def create_advanced_charting_interface(ticker):
     
     st.markdown("---")
     
-    # Time period selector with unique keys
-    col1, col2, col3 = st.columns([2, 1, 1])
-    
-    with col1:
-        st.markdown(f"### Technical Analysis for {ticker}")
-        st.markdown("*Professional-grade technical indicators and market signals*")
-    
-    with col2:
-        period = st.selectbox(
-            "Time Period",
-            options=["1mo", "3mo", "6mo", "1y", "2y"],
-            index=3,
-            key=f"period_{ticker}_{id(ticker)}",
-            help="Select time period for analysis"
-        )
-    
-    with col3:
-        chart_style = st.selectbox(
-            "Chart Style",
-            options=["Candlestick", "Line", "OHLC"],
-            index=0,
-            key=f"style_{ticker}_{id(ticker)}"
-        )
-    
+    # Technical analysis header - no dropdowns
+    st.markdown(f"### Technical Analysis for {ticker}")
+    st.markdown("*Professional-grade technical indicators and market signals*")
+    st.markdown("*Fixed 1-year analysis with candlestick charts for optimal stability*")
     st.markdown("")
+
+    # Set fixed parameters for reliable analysis
+    period = "1y"  # Fixed to 1-year analysis
+    chart_style = "Candlestick"  # Fixed to candlestick charts
     
     # Initialize technical analyzer
     analyzer = TechnicalAnalyzer(ticker, period)
