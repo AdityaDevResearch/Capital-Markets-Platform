@@ -768,3 +768,4 @@ def get_company_suggestions() -> List[str]:
         'SPY', 'QQQ', 'VTI',
         # Consumer favorites
         'Disney', 'Coca-Cola', 'Walmart', 'Nike'
+    ]
