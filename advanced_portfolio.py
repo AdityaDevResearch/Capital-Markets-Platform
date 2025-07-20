@@ -283,5 +283,3 @@ def create_advanced_portfolio_interface(tickers):
         )
         
         st.plotly_chart(fig_corr, use_container_width=True)
-    
-   
