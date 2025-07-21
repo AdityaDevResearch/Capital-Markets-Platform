@@ -768,13 +768,23 @@ setTimeout(function() {
 
 """, unsafe_allow_html=True)
 
+import time
+import random
 @st.cache_data(ttl=300)
+
+@st.cache_data(ttl=7200)  # 2-hour cache to reduce API usage
 def get_stock_data(ticker):
-    """Get comprehensive stock data with professional error handling"""
+    """Fetch stock data with rate limit handling and graceful fallback"""
     try:
+        # Add 0.5–1.5 second delay to avoid Yahoo API rate limiting
+        time.sleep(random.uniform(0.5, 1.5))
+        
         stock = yf.Ticker(ticker)
         info = stock.info
-        hist = safe_get_history(stock, "1y")
+        
+        hist = stock.history(period="1y")
+        if hist.empty:
+            raise ValueError("No historical data available.")
         
         return {
             'ticker': ticker,
@@ -790,9 +800,30 @@ def get_stock_data(ticker):
             'summary': info.get('longBusinessSummary', 'N/A'),
             'historical_data': hist
         }
+        
     except Exception as e:
-        st.error(f"Data retrieval error for {ticker}: {str(e)}")
-        return None
+        # Rate limit detected or API error
+        error_msg = str(e).lower()
+        if "too many requests" in error_msg or "rate limit" in error_msg:
+            st.warning(f"⏳ Yahoo Finance rate limit reached for **{ticker}**. Try again in a few minutes.")
+            return {
+                'ticker': ticker,
+                'name': f'{ticker} (Rate Limited)',
+                'price': 0,
+                'change': 0,
+                'change_percent': 0,
+                'pe_ratio': 0,
+                'market_cap': 0,
+                'volume': 0,
+                'sector': 'N/A',
+                'industry': 'N/A',
+                'summary': 'Data temporarily unavailable due to rate limiting.',
+                'historical_data': None
+            }
+        else:
+            st.error(f" Data retrieval error for {ticker}: {str(e)}")
+            return None
+
 
 def create_premium_market_dashboard():
     """Create luxury market intelligence dashboard"""
