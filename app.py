@@ -12,6 +12,7 @@ from typing import Dict
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from scipy import stats
+from monte_carlo_engine import MonteCarloRiskEngine
 # Safe imports with error handling
 try:
     from smart_search import search_company, get_company_suggestions
@@ -663,6 +664,186 @@ st.markdown("""
         padding: 2rem;
     }
 }
+            /* ——— Monte-Carlo Portfolio Risk STYLES ——— */
+.monte-carlo-section {
+    text-align: center;
+    padding: 4rem;
+    border-radius: 20px;
+    margin: 3rem 0;
+    font-family: 'Inter', sans-serif;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8);   /* premium blue matching market intelligence */
+    color: white;
+}
+
+.monte-carlo-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: luxury-rotate 20s linear infinite;
+    pointer-events: none;
+}
+
+.monte-carlo-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -50%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(255,255,255,0.03), 
+        rgba(255,255,255,0.06), 
+        rgba(255,255,255,0.03), 
+        transparent
+    );
+    animation: luxury-shimmer 6s infinite;
+    pointer-events: none;
+}
+
+@keyframes luxury-rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes luxury-shimmer {
+    0% { transform: translateX(-50%); }
+    100% { transform: translateX(50%); }
+}
+
+.monte-carlo-section h3 {
+    font-family: 'Inter', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(135deg, #f8fafc, #cbd5e0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    animation: elegant-fade-in 2s ease-out;
+}
+
+.monte-carlo-section h4 {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 1;
+    opacity: 0.95;
+    animation: elegant-fade-in 2s ease-out 0.3s both;
+}
+
+.monte-carlo-section p {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.125rem;
+    font-weight: 400;
+    opacity: 0.9;
+    position: relative;
+    z-index: 1;
+    line-height: 1.7;
+    animation: elegant-fade-in 2s ease-out 0.6s both;
+}
+
+@keyframes elegant-fade-in {
+    0% { 
+        opacity: 0; 
+        transform: translateY(20px);
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateY(0);
+    }
+}
+
+.mc-metric-card {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border: 1px solid #475569;
+    border-radius: 16px;
+    padding: 1.75rem 1rem;
+    margin: 1rem 0;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.mc-metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+    transition: width 0.3s ease;
+}
+
+.mc-metric-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    border-color: #60a5fa;
+}
+
+.mc-metric-card:hover::before {
+    width: 100%;
+    opacity: 0.1;
+}
+
+/* slider for portfolio weights */
+input[type="range"] {
+    accent-color: #3b82f6;
+    height: 4px;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+input[type="range"]:hover {
+    height: 6px;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+/* risk-contribution bar chart colours */
+.mc-risk-bar rect {
+    fill: url(#mc-gradient);
+    transition: opacity 0.3s ease;
+}
+
+.mc-risk-bar rect:hover {
+    opacity: 0.8;
+}
+
+/* ensure Plotly charts sit nicely in dark background */
+.plot-container.plotly .svg-container {
+    background: transparent !important;
+    transition: all 0.3s ease;
+}
+
+/* Enhanced button styling for Monte Carlo section */
+.monte-carlo-section .stButton > button {
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.monte-carlo-section .stButton > button:hover {
+    background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 15px 40px rgba(37, 99, 235, 0.5);
+}
+
+
 </style>
 
 <script>
@@ -771,7 +952,25 @@ setTimeout(function() {
 
 import time
 import random
+
 @st.cache_data(ttl=300)
+def _cache_placeholder():
+    pass
+
+@st.cache_data(ttl=7200)  # 2-hour cache to reduce API usage
+def _init_state():
+    defaults = {
+        'monte_carlo_results': {},
+        'portfolio_tickers': [],
+        'portfolio_weights': [],
+        'active_module': 'portfolio'
+    }
+
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
+_init_state()
 
 @st.cache_data(ttl=7200)  # 2-hour cache to reduce API usage
 def get_stock_data(ticker):
@@ -780,7 +979,6 @@ def get_stock_data(ticker):
         # Add 0.5–1.5 second delay to avoid Yahoo API rate limiting
         time.sleep(0.1)
 
-        
         stock = yf.Ticker(ticker)
         info = stock.info
         
@@ -825,7 +1023,6 @@ def get_stock_data(ticker):
         else:
             st.error(f" Data retrieval error for {ticker}: {str(e)}")
             return None
-
 
 def create_premium_market_dashboard():
     """Create luxury market intelligence dashboard with always fresh data"""
@@ -1015,8 +1212,6 @@ def create_premium_market_dashboard():
                     </div>
                     """, unsafe_allow_html=True)
 
-
-
 def create_premium_analytics_dashboard(ticker):
     """Create premium analytics dashboard"""
     st.markdown("""
@@ -1092,6 +1287,64 @@ def create_premium_analytics_dashboard(ticker):
         with mc_col3:
             st.metric("Projected Annual Return", f"{monte_carlo['expected_return']:.2f}%")
 
+# MOVED THIS FUNCTION UP - MUST BE DEFINED BEFORE display_active_module()
+def _display_mc_results(results):
+    """Display Monte Carlo simulation results"""
+    st.markdown("#### Monte Carlo Risk Analysis Results")
+    
+    # Key metrics
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Expected Return", f"{results['expected_return']:.2%}")
+    col2.metric("Portfolio Volatility", f"{results['volatility']:.2%}")
+    col3.metric("Value at Risk (95%)", f"{results['var_95']:.2%}")
+    col4.metric("Sharpe Ratio", f"{results['sharpe_ratio']:.2f}")
+    
+    # Simulation paths chart
+    fig = go.Figure()
+    for path in results['simulation_paths'][:50]:
+        fig.add_scatter(
+            y=path, mode='lines',
+            line=dict(color='#60a5fa', width=1),
+            opacity=0.2, showlegend=False
+        )
+    fig.update_layout(
+        height=300, 
+        title="Simulated Portfolio Value Paths",
+        margin=dict(l=10, r=10, t=35, b=10)
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Enhanced Risk contribution table for 6 securities
+    risk_df = pd.DataFrame({
+        "Security": results['tickers'],
+        "Weight %": [f"{w*100:.1f}%" for w in results['weights']],
+        "Risk Contribution %": [f"{rc*100:.1f}%" for rc in results['risk_contribution_pct']]
+    })
+    
+    st.markdown("**Portfolio Risk Breakdown:**")
+    
+    # Optimal display for up to 6 securities
+    if len(risk_df) <= 3:
+        # For 2-3 securities, show in columns
+        cols = st.columns(len(risk_df))
+        for i, row in risk_df.iterrows():
+            with cols[i]:
+                st.metric(
+                    row['Security'], 
+                    row['Weight %'], 
+                    row['Risk Contribution %']
+                )
+    else:
+        # For 4-6 securities, show enhanced table
+        st.dataframe(
+            risk_df, 
+            use_container_width=True,
+            height=min(320, len(risk_df) * 50 + 70),  # Perfect height for 6 securities
+            hide_index=True
+        )
+        
+        # Portfolio summary
+        st.markdown(f"**Portfolio Composition:** {len(risk_df)} securities with optimized risk-weighted allocation")
 
 def display_active_module():
     """Display content based on selected module with auto-scroll"""
@@ -1161,27 +1414,91 @@ def display_active_module():
         st.markdown("- Risk-adjusted return calculations")
         
         st.markdown("**Portfolio Analysis Tool:**")
-        portfolio_input = st.text_input("Enter stock tickers (comma-separated)", 
-                                       placeholder="AAPL, MSFT, GOOGL, JPM")
+        portfolio_input = st.text_input(
+            "Enter stock tickers (comma-separated)", 
+            placeholder="AAPL, MSFT, JPM, TSLA, NVDA"
+        )
         
         if portfolio_input and st.button("Execute Portfolio Analysis"):
-            tickers = [ticker.strip().upper() for ticker in portfolio_input.split(',')]
-            
+            tickers = [t.strip().upper() for t in portfolio_input.split(',')]
             if len(tickers) < 2:
                 st.warning("Please enter at least 2 tickers for meaningful portfolio analysis")
-            elif len(tickers) > 8:
-                st.warning("Maximum 8 tickers recommended for optimal performance")
-                tickers = tickers[:8]  # Limit to 8 tickers
+            elif len(tickers) > 6:
+                st.warning("Maximum 6 tickers recommended for optimal performance")
+                tickers = tickers[:6]
             else:
                 st.success(f"Advanced portfolio analysis initiated for: {', '.join(tickers)}")
-                
-                # Use the advanced portfolio analytics
+                st.session_state.portfolio_tickers = tickers
+                st.session_state.portfolio_weights = [100/len(tickers)] * len(tickers)
+                st.session_state.monte_carlo_results = {}
                 create_advanced_portfolio_interface(tickers)
-
-        if st.button("Close Module"):
-            st.session_state['active_module'] = None
-            st.rerun()
-
+        
+        # Monte Carlo box (always visible)
+        if not st.session_state.get('portfolio_tickers', []):
+            st.markdown('''
+<div class="monte-carlo-section">
+  <h3>Monte Carlo Portfolio Risk Analysis</h3>
+  <h4>Advanced Risk Modeling Engine</h4>
+  <p>Monte Carlo simulation provides institutional-grade risk analysis by running 10,000+ scenarios to model potential portfolio outcomes, risk metrics, and optimal allocation strategies.</p>
+  <p><strong>Ready for Analysis:</strong> Enter stock tickers above and click "Execute Portfolio Analysis."</p>
+</div>
+''', unsafe_allow_html=True)
+        else:
+            # box header with current portfolio
+            names = ", ".join(st.session_state.get('portfolio_tickers', []))
+            st.markdown(f'''
+<div class="monte-carlo-section">
+  <h3>Monte Carlo Portfolio Risk Analysis</h3>
+  <p><strong>Current Portfolio:</strong> {names}</p>
+</div>
+''', unsafe_allow_html=True)
+            
+            st.markdown("**Adjust Portfolio Weights:**")
+            
+            # Smart layout for 6 securities - FIXED INDENTATION
+            if len(st.session_state.portfolio_tickers) <= 3:
+                # Single column for 2-3 securities
+                for i, t in enumerate(st.session_state.portfolio_tickers):
+                    st.session_state.portfolio_weights[i] = st.slider(
+                        f"Weight % for {t}", 0.0, 100.0,
+                        float(st.session_state.portfolio_weights[i]),
+                        1.0, key=f"weight_{t}_{i}"
+                    )
+            else:
+                # Two columns for 4-6 securities
+                col1, col2 = st.columns(2)
+                for i, t in enumerate(st.session_state.portfolio_tickers):
+                    with col1 if i % 2 == 0 else col2:
+                        st.session_state.portfolio_weights[i] = st.slider(
+                            f"Weight % for {t}", 0.0, 100.0,
+                            float(st.session_state.portfolio_weights[i]),
+                            1.0, key=f"weight_{t}_{i}"
+                        )
+            
+            total = sum(st.session_state.portfolio_weights)
+            weights = [w/total for w in st.session_state.portfolio_weights] if total else []
+            
+            if st.button("Run Monte Carlo Risk Simulation", type="primary"):
+                engine = MonteCarloRiskEngine()
+                with st.spinner("Running 10,000-path simulation..."):
+                    results = engine.portfolio_monte_carlo(
+                        st.session_state.portfolio_tickers,
+                        weights,
+                        days_ahead=252
+                    )
+                    if results:
+                        results.update(engine.risk_contribution_analysis(results))
+                        st.session_state.monte_carlo_results = results
+                    else:
+                        st.warning("Simulation failed — data unavailable.")
+            
+            if st.session_state.monte_carlo_results:
+                _display_mc_results(st.session_state.monte_carlo_results)
+            
+            if st.button("Clear Portfolio"):
+                for key in ('portfolio_tickers','portfolio_weights','monte_carlo_results'):
+                    st.session_state.pop(key, None)
+                st.rerun()
 
 def main():
     # INSTANT DISPLAY - Headers load immediately
@@ -1331,7 +1648,6 @@ def main():
     
     st.markdown("---")
     st.markdown("**Capital Markets Intelligence Platform** • *Institutional Investment Research & Advanced Analytics* • *Professional Portfolio Management Tools*")
-
 
 if __name__ == "__main__":
     main()
