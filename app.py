@@ -1627,7 +1627,7 @@ def display_active_module():
                                     with open(results['pdf_report'], "rb") as pdf_file:
                                         pdf_data = pdf_file.read()
                                         st.download_button(
-                                            label="📄 Download PDF Analysis",
+                                            label=" Download PDF Analysis",
                                             data=pdf_data,
                                             file_name=f"Daily_Portfolio_Analysis_{datetime.now().strftime('%Y%m%d')}.pdf",
                                             mime="application/pdf",
@@ -1642,7 +1642,7 @@ def display_active_module():
                                     with open(results['excel_dashboard'], "rb") as excel_file:
                                         excel_data = excel_file.read()
                                         st.download_button(
-                                            label="📊 Download Excel Dashboard",
+                                            label=" Download Excel Dashboard",
                                             data=excel_data,
                                             file_name=f"Daily_KPI_Dashboard_{datetime.now().strftime('%Y%m%d')}.xlsx",
                                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
