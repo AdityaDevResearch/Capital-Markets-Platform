@@ -14,7 +14,7 @@ from sklearn.metrics import r2_score
 from scipy import stats
 import os
 from monte_carlo_engine import MonteCarloRiskEngine
-from report_generator import ReportIntegrationManager
+from reports.report_generator import ReportIntegrationManager
 # Safe imports with error handling
 try:
     from smart_search import search_company, get_company_suggestions
