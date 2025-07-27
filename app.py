@@ -12,7 +12,9 @@ from typing import Dict
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from scipy import stats
+import os
 from monte_carlo_engine import MonteCarloRiskEngine
+from reports.report_generator import ReportIntegrationManager
 # Safe imports with error handling
 try:
     from smart_search import search_company, get_company_suggestions
@@ -1405,37 +1407,38 @@ def display_active_module():
             st.rerun()
     
     elif active_module == 'portfolio':
-        st.subheader("Portfolio Intelligence Suite")
-        
-        st.markdown("**Portfolio Management Features:**")
-        st.markdown("- Multi-company tracking and analysis")
-        st.markdown("- Sector allocation optimization")
-        st.markdown("- Performance attribution analysis")
-        st.markdown("- Risk-adjusted return calculations")
-        
-        st.markdown("**Portfolio Analysis Tool:**")
-        portfolio_input = st.text_input(
-            "Enter stock tickers (comma-separated)", 
-            placeholder="AAPL, MSFT, JPM, TSLA, NVDA"
-        )
-        
-        if portfolio_input and st.button("Execute Portfolio Analysis"):
-            tickers = [t.strip().upper() for t in portfolio_input.split(',')]
-            if len(tickers) < 2:
-                st.warning("Please enter at least 2 tickers for meaningful portfolio analysis")
-            elif len(tickers) > 6:
-                st.warning("Maximum 6 tickers recommended for optimal performance")
-                tickers = tickers[:6]
-            else:
-                st.success(f"Advanced portfolio analysis initiated for: {', '.join(tickers)}")
-                st.session_state.portfolio_tickers = tickers
-                st.session_state.portfolio_weights = [100/len(tickers)] * len(tickers)
-                st.session_state.monte_carlo_results = {}
-                create_advanced_portfolio_interface(tickers)
-        
-        # Monte Carlo box (always visible)
-        if not st.session_state.get('portfolio_tickers', []):
-            st.markdown('''
+     st.subheader("Portfolio Intelligence Suite")
+    
+    st.markdown("**Portfolio Management Features:**")
+    st.markdown("- Multi-company tracking and analysis")
+    st.markdown("- Sector allocation optimization")
+    st.markdown("- Performance attribution analysis")
+    st.markdown("- Risk-adjusted return calculations")
+    
+    st.markdown("**Portfolio Analysis Tool:**")
+    portfolio_input = st.text_input(
+        "Enter stock tickers (comma-separated)", 
+        placeholder="AAPL, MSFT, JPM, TSLA, NVDA",
+        key="portfolio_ticker_input"  # <-- ADD THIS LINE
+    )
+    
+    if portfolio_input and st.button("Execute Portfolio Analysis"):
+        tickers = [t.strip().upper() for t in portfolio_input.split(',')]
+        if len(tickers) < 2:
+            st.warning("Please enter at least 2 tickers for meaningful portfolio analysis")
+        elif len(tickers) > 6:
+            st.warning("Maximum 6 tickers recommended for optimal performance")
+            tickers = tickers[:6]
+        else:
+            st.success(f"Advanced portfolio analysis initiated for: {', '.join(tickers)}")
+            st.session_state.portfolio_tickers = tickers
+            st.session_state.portfolio_weights = [100/len(tickers)] * len(tickers)
+            st.session_state.monte_carlo_results = {}
+            create_advanced_portfolio_interface(tickers)
+    
+    # Monte Carlo box (always visible)
+    if not st.session_state.get('portfolio_tickers', []):
+        st.markdown('''
 <div class="monte-carlo-section">
   <h3>Monte Carlo Portfolio Risk Analysis</h3>
   <h4>Advanced Risk Modeling Engine</h4>
@@ -1443,62 +1446,222 @@ def display_active_module():
   <p><strong>Ready for Analysis:</strong> Enter stock tickers above and click "Execute Portfolio Analysis."</p>
 </div>
 ''', unsafe_allow_html=True)
-        else:
-            # box header with current portfolio
-            names = ", ".join(st.session_state.get('portfolio_tickers', []))
-            st.markdown(f'''
+    else:
+        # box header with current portfolio
+        names = ", ".join(st.session_state.get('portfolio_tickers', []))
+        st.markdown(f'''
 <div class="monte-carlo-section">
   <h3>Monte Carlo Portfolio Risk Analysis</h3>
   <p><strong>Current Portfolio:</strong> {names}</p>
 </div>
 ''', unsafe_allow_html=True)
-            
-            st.markdown("**Adjust Portfolio Weights:**")
-            
-            # Smart layout for 6 securities - FIXED INDENTATION
+        
+        st.markdown("**Adjust Portfolio Weights:**")
+        
+        # Form container to prevent auto-scroll
+        with st.form("portfolio_weights_form"):
+            # Smart layout for 6 securities
             if len(st.session_state.portfolio_tickers) <= 3:
-                # Single column for 2-3 securities
+                temp_weights = []
                 for i, t in enumerate(st.session_state.portfolio_tickers):
-                    st.session_state.portfolio_weights[i] = st.slider(
+                    weight = st.slider(
                         f"Weight % for {t}", 0.0, 100.0,
                         float(st.session_state.portfolio_weights[i]),
-                        1.0, key=f"weight_{t}_{i}"
+                        1.0, key=f"form_weight_{t}_{i}"
                     )
+                    temp_weights.append(weight)
             else:
-                # Two columns for 4-6 securities
+                temp_weights = []
                 col1, col2 = st.columns(2)
                 for i, t in enumerate(st.session_state.portfolio_tickers):
                     with col1 if i % 2 == 0 else col2:
-                        st.session_state.portfolio_weights[i] = st.slider(
+                        weight = st.slider(
                             f"Weight % for {t}", 0.0, 100.0,
                             float(st.session_state.portfolio_weights[i]),
-                            1.0, key=f"weight_{t}_{i}"
+                            1.0, key=f"form_weight_{t}_{i}"
                         )
+                        temp_weights.append(weight)
             
-            total = sum(st.session_state.portfolio_weights)
-            weights = [w/total for w in st.session_state.portfolio_weights] if total else []
+            # Show current total
+            current_total = sum(temp_weights)
+            if current_total != 100:
+                st.info(f"Current total: {current_total:.1f}% (Will be normalized to 100%)")
             
-            if st.button("Run Monte Carlo Risk Simulation", type="primary"):
-                engine = MonteCarloRiskEngine()
-                with st.spinner("Running 10,000-path simulation..."):
-                    results = engine.portfolio_monte_carlo(
-                        st.session_state.portfolio_tickers,
-                        weights,
-                        days_ahead=252
-                    )
-                    if results:
-                        results.update(engine.risk_contribution_analysis(results))
-                        st.session_state.monte_carlo_results = results
-                    else:
-                        st.warning("Simulation failed — data unavailable.")
-            
-            if st.session_state.monte_carlo_results:
-                _display_mc_results(st.session_state.monte_carlo_results)
-            
-            if st.button("Clear Portfolio"):
-                for key in ('portfolio_tickers','portfolio_weights','monte_carlo_results'):
-                    st.session_state.pop(key, None)
-                st.rerun()
+            # Update weights only when user clicks this button
+            if st.form_submit_button("Update Portfolio Weights", type="secondary"):
+                st.session_state.portfolio_weights = temp_weights
+                st.success("Portfolio weights updated successfully!")
+        
+        total = sum(st.session_state.portfolio_weights)
+        weights = [w/total for w in st.session_state.portfolio_weights] if total else []
+        
+        if st.button("Run Monte Carlo Risk Simulation", type="primary"):
+            engine = MonteCarloRiskEngine()
+            with st.spinner("Running 10,000-path simulation..."):
+                results = engine.portfolio_monte_carlo(
+                    st.session_state.portfolio_tickers,
+                    weights,
+                    days_ahead=252
+                )
+                if results:
+                    results.update(engine.risk_contribution_analysis(results))
+                    st.session_state.monte_carlo_results = results
+                else:
+                    st.warning("Simulation failed — data unavailable.")
+        
+        if st.session_state.monte_carlo_results:
+            _display_mc_results(st.session_state.monte_carlo_results)
+
+        
+           
+        
+        if st.button("Clear Portfolio"):
+            for key in ('portfolio_tickers','portfolio_weights','monte_carlo_results'):
+                st.session_state.pop(key, None)
+            st.rerun()
+        
+        # Professional Reporting Suite - PROPERLY INDENTED AND POSITIONED
+        st.markdown("---")
+        st.markdown("### Professional Reporting Suite")
+        st.markdown("*Generate and download institutional-grade reports with Monte Carlo visualizations*")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("Generate PDF Report", type="secondary", help="Create professional PDF with charts"):
+                with st.spinner("Generating institutional-grade PDF report..."):
+                    try:
+                        report_manager = ReportIntegrationManager()
+                        results = report_manager.generate_reports_from_streamlit_session(st.session_state)
+                        
+                        if results['status'] == 'success':
+                            st.success("Professional PDF report generated successfully")
+                            
+                            # Direct download button for PDF
+                            try:
+                                with open(results['pdf_report'], "rb") as pdf_file:
+                                    pdf_data = pdf_file.read()
+                                    st.download_button(
+                                        label=" Download PDF Report",
+                                        data=pdf_data,
+                                        file_name=f"Portfolio_Analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                                        mime="application/pdf",
+                                        type="primary"
+                                    )
+                            except Exception as e:
+                                st.error(f"Download preparation failed: {str(e)}")
+                                st.info(f"Report saved locally: {results['pdf_report']}")
+                        else:
+                            st.error(f"Error generating report: {results.get('message', 'Unknown error')}")
+                    except Exception as e:
+                        st.error(f"Report generation failed: {str(e)}")
+        
+        with col2:
+            if st.button("Generate Excel Dashboard", type="secondary", help="Create Excel KPI dashboard"):
+                with st.spinner("Creating professional Excel dashboard..."):
+                    try:
+                        report_manager = ReportIntegrationManager()
+                        results = report_manager.generate_reports_from_streamlit_session(st.session_state)
+                        
+                        if results['status'] == 'success':
+                            st.success("Excel dashboard created successfully")
+                            
+                            # Direct download button for Excel
+                            try:
+                                with open(results['excel_dashboard'], "rb") as excel_file:
+                                    excel_data = excel_file.read()
+                                    st.download_button(
+                                        label=" Download Excel Dashboard",
+                                        data=excel_data,
+                                        file_name=f"KPI_Dashboard_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        type="primary"
+                                    )
+                            except Exception as e:
+                                st.error(f"Download preparation failed: {str(e)}")
+                                st.info(f"Dashboard saved locally: {results['excel_dashboard']}")
+                        else:
+                            st.error(f"Error creating dashboard: {results.get('message', 'Unknown error')}")
+                    except Exception as e:
+                        st.error(f"Dashboard creation failed: {str(e)}")
+        
+        with col3:
+            if st.button("Daily KPI Digest", type="primary", help="Generate complete digest with charts"):
+                with st.spinner("Preparing comprehensive daily KPI digest..."):
+                    try:  
+                        
+                        
+                        report_manager = ReportIntegrationManager()
+                        results = report_manager.generate_reports_from_streamlit_session(st.session_state)
+                        
+                        if results['status'] == 'success':
+                            st.success("Daily KPI digest generated successfully")
+                            
+                            # Executive summary display
+                            with st.expander("Executive Summary", expanded=True):
+                                summary = results['executive_summary']
+                                
+                                col_a, col_b = st.columns(2)
+                                with col_a:
+                                    st.metric("Report Date", summary['report_date'])
+                                    st.metric("Securities", f"{summary['portfolio_count']} active")
+                                
+                                with col_b:
+                                    if summary['key_metrics']:
+                                        st.write("**Key Performance Metrics:**")
+                                        for metric, value in summary['key_metrics'].items():
+                                            st.write(f"• **{metric.replace('_', ' ').title()}:** {value}")
+                                    
+                                    if summary['recommendations']:
+                                        st.write("**Professional Recommendations:**")
+                                        for rec in summary['recommendations']:
+                                            st.write(f"✓ {rec}")
+                            
+                            # Professional download section
+                            st.markdown("### Download Complete Report Package")
+                            
+                            col_download1, col_download2 = st.columns(2)
+                            
+                            with col_download1:
+                                try:
+                                    with open(results['pdf_report'], "rb") as pdf_file:
+                                        pdf_data = pdf_file.read()
+                                        st.download_button(
+                                            label="📄 Download PDF Analysis",
+                                            data=pdf_data,
+                                            file_name=f"Daily_Portfolio_Analysis_{datetime.now().strftime('%Y%m%d')}.pdf",
+                                            mime="application/pdf",
+                                            type="primary",
+                                            use_container_width=True
+                                        )
+                                except Exception as e:
+                                    st.error("PDF download unavailable")
+                            
+                            with col_download2:
+                                try:
+                                    with open(results['excel_dashboard'], "rb") as excel_file:
+                                        excel_data = excel_file.read()
+                                        st.download_button(
+                                            label="📊 Download Excel Dashboard",
+                                            data=excel_data,
+                                            file_name=f"Daily_KPI_Dashboard_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                            type="primary",
+                                            use_container_width=True
+                                        )
+                                except Exception as e:
+                                    st.error("Excel download unavailable")
+                        else:
+                            st.error(f"Error generating digest: {results.get('message', 'Unknown error')}")
+                    except Exception as e:
+                        st.error(f"Digest generation failed: {str(e)}")
+        
+        # Professional note
+        st.markdown("---")
+        st.markdown("*Reports include Monte Carlo projection charts and are saved with professional timestamps*")
+
+
+
 
 def main():
     # INSTANT DISPLAY - Headers load immediately
@@ -1551,6 +1714,7 @@ def main():
     # INSTANT DISPLAY - Search interface loads immediately
     display_active_module()
     
+    # SINGLE Security Intelligence Search Interface (REMOVED DUPLICATE)
     st.markdown("""
     <div class="executive-search">
         <h2>Security Intelligence Search</h2>
@@ -1564,12 +1728,13 @@ def main():
         search_query = st.text_input(
             "",
             placeholder="Enter security identifier or company name...",
-            help="Examples: Apple, Microsoft, TCS, JPMorgan Chase, AAPL, MSFT"
+            help="Examples: Apple, Microsoft, TCS, JPMorgan Chase, AAPL, MSFT",
+            key="main_security_search"  # ADDED UNIQUE KEY
         )
     
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
-        search_button = st.button("Execute Analysis", type="primary")
+        search_button = st.button("Execute Analysis", type="primary", key="main_search_button")  # ADDED UNIQUE KEY
     
     st.markdown("**Featured Securities for Analysis**")
     suggestions = get_company_suggestions()
@@ -1580,7 +1745,7 @@ def main():
             if st.button(suggestion, key=f"suggestion_{i}"):
                 search_query = suggestion
                 search_button = True
-    
+
     # SEARCH PROCESSING - Only loads when needed
     if search_query and (search_button or search_query):
         with st.spinner("Executing comprehensive institutional analysis..."):
@@ -1617,9 +1782,11 @@ def main():
                     volume_display = f"{stock_data['volume']/1e6:.1f}M" if stock_data['volume'] > 1e6 else f"{stock_data['volume']:,}"
                     st.metric("Trading Volume", volume_display)
                 
+                # Analytics dashboard and charting (existing functionality)
                 create_premium_analytics_dashboard(search_result['ticker'])
                 create_advanced_charting_interface(search_result['ticker'])
                 
+                # Business Intelligence Summary
                 if stock_data['summary'] != 'N/A':
                     st.subheader("Business Intelligence Summary")
                     summary_text = stock_data['summary'][:750] + "..." if len(stock_data['summary']) > 750 else stock_data['summary']
@@ -1631,7 +1798,7 @@ def main():
             
             st.warning(f"Suggested match: {company_data['official_name']} ({search_result['ticker']}) - Confidence: {confidence:.0f}%")
             
-            if st.button(f"Proceed with {company_data['official_name']} analysis", type="primary"):
+            if st.button(f"Proceed with {company_data['official_name']} analysis", type="primary", key="fuzzy_proceed"):
                 st.rerun()
         
         else:
@@ -1645,9 +1812,10 @@ def main():
                         if st.button(suggestion, key=f"alt_{i}"):
                             search_query = suggestion
                             st.rerun()
-    
+
     st.markdown("---")
     st.markdown("**Capital Markets Intelligence Platform** • *Institutional Investment Research & Advanced Analytics* • *Professional Portfolio Management Tools*")
+
 
 if __name__ == "__main__":
     main()
