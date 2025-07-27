@@ -1144,7 +1144,13 @@ def create_premium_market_dashboard():
     market_data = get_fresh_indices()
     sentiment_data = get_fresh_sentiment()
     movers_data = get_fresh_movers()
-    current_time = datetime.now().strftime("%H:%M:%S")
+    import pytz
+    from datetime import datetime
+
+    # Get India Standard Time (IST)
+    ist_timezone = pytz.timezone('Asia/Kolkata')
+    current_time = datetime.now(ist_timezone).strftime("%H:%M:%S")
+
     
     # Major Market Indices  
     st.subheader("Primary Market Indices")
